@@ -3,29 +3,31 @@
 
 <head>
     <title>Getting started with Microsoft Identity</title>
+    <!-- Bluebird is only necessary for Intenet Explorer support. -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bluebird/3.7.2/bluebird.min.js"></script>
+    <!--
     <script src="https://alcdn.msauth.net/browser/2.11.1/js/msal-browser.js"></script>
-    <!--script type="text/javascript" src="https://alcdn.msauth.net/browser/2.28.2/js/msal-browser.min.js"></script-->
+    <script src="https://alcdn.msauth.net/browser/2.14.2/js/msal-browser.js"></script>
+    -->
+    <script src="https://alcdn.msauth.net/browser/2.28.2/js/msal-browser.min.js"></script>
 </head>
 
 <body>
-    <div class="container">
-        <div>
-            <p id="WelcomeMessage">Microsoft Authentication Library for JavaScript (MSAL.js) Exercise</p>
-            <button id="SignIn" onclick="signIn()">Sign In</button>
-            <p id="debug"></p>
-        </div>
-        <div>
-            <pre id="json"></pre>
-        </div>
+    <div>
+        <p id="WelcomeMessage">Microsoft Authentication Library for JavaScript (MSAL.js) Exercise</p>
+        <button id="SignIn" onclick="signIn()">Sign In</button>
+        <p id="debug"></p>
+        <pre id="json"></pre>
     </div>
     <script>
+        var forceRedirect = true;
         var ua = window.navigator.userAgent;
         var isMsie = ua.indexOf('MSIE ') > 0;
         var isMsie11 = ua.indexOf('Trident/') > 0;
         var isIE = isMsie || isMsie11;
         var isEdge = ua.indexOf('Edg/') > 0;
-        var loginType = isIE ? 'REDIRECT' : 'POPUP';
+        var loginType = isIE || forceRedirect ? 'REDIRECT' : 'POPUP';
+        document.getElementById('debug').innerHTML = 'loginType=' + loginType;
 
         var msalConfig = {
             auth: {
@@ -48,27 +50,11 @@
 
         var userName = '';
 
-        showDebugInfo('1');
-        // TODO: add CODE before this line.
-
         var msalApplication = new msal.PublicClientApplication(msalConfig);
 
         msalApplication.handleRedirectPromise()
             .then(handleResponse)
             .catch(handleError);
-
-        showDebugInfo('2');
-
-        // TODO: add FUNCTIONS before this line.
-
-        function showDebugInfo(callNumber) {
-            var debug = document.getElementById('debug');
-            var debugMsg = callNumber + ' ---> IE=' + isIE + ' Edge=' + isEdge +
-                ' useCookie=' + msalConfig.cache.storeAuthStateInCookie +
-                ' loginType=' + loginType + '<br/>' +
-                'userName=' + userName;
-            debug.innerHTML = debugMsg;
-        }
 
         function signIn() {
             if (loginType == 'POPUP') {
@@ -107,7 +93,6 @@
             }
             updateUserInterface();
             acquireTokenAndGetUser();
-            showDebugInfo('3');
         }
 
         function acquireTokenAndGetUser() {
