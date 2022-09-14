@@ -5,11 +5,7 @@
     <title>Getting started with Microsoft Identity</title>
     <!-- Bluebird is only necessary for Intenet Explorer support. -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bluebird/3.7.2/bluebird.min.js"></script>
-    <!--
-    <script src="https://alcdn.msauth.net/browser/2.11.1/js/msal-browser.js"></script>
-    <script src="https://alcdn.msauth.net/browser/2.14.2/js/msal-browser.js"></script>
-    -->
-    <script src="https://alcdn.msauth.net/browser/2.28.2/js/msal-browser.min.js"></script>
+    <script src="https://alcdn.msauth.net/browser/2.28.3/js/msal-browser.min.js"></script>
 </head>
 
 <body>
@@ -20,15 +16,13 @@
         <pre id="json"></pre>
     </div>
     <script>
-        var forceRedirect = true;
+        var forceRedirect = true; // false to allow popups on Edge and other browsers.
         var ua = window.navigator.userAgent;
         var isMsie = ua.indexOf('MSIE ') > 0;
         var isMsie11 = ua.indexOf('Trident/') > 0;
         var isIE = isMsie || isMsie11;
         var isEdge = ua.indexOf('Edg/') > 0;
         var loginType = isIE || forceRedirect ? 'REDIRECT' : 'POPUP';
-        document.getElementById('debug').innerHTML = 'loginType=' + loginType;
-
         var msalConfig = {
             auth: {
                 clientId: '71178172-fd40-47be-892b-ce7311583ba1',
@@ -40,18 +34,16 @@
                 storeAuthStateInCookie: isIE || isEdge
             }
         };
-
         var graphConfig = {
             graphMeEndpoint: 'https://graph.microsoft.com/v1.0/me',
             requestObj: {
                 scopes: ['user.read']
             }
         }
-
         var userName = '';
-
         var msalApplication = new msal.PublicClientApplication(msalConfig);
 
+        document.getElementById('debug').innerHTML = 'loginType=' + loginType;
         msalApplication.handleRedirectPromise()
             .then(handleResponse)
             .catch(handleError);
@@ -73,36 +65,44 @@
             msalApplication.logout(logoutRequest);
         }
 
+        function updateUserInterface() {
+            var divWelcome = document.getElementById('WelcomeMessage');
+            divWelcome.innerHTML = 'Welcome <strong>' + userName + '</strong> to Microsoft Graph API';
+            var loginButton = document.getElementById('SignIn');
+            loginButton.innerHTML = 'Sign Out';
+            loginButton.setAttribute('onclick', 'signOut()');
+        }
+
         function handleError(error) {
             console.log('Error: ', error);
         }
 
         function handleResponse(loginResponse) {
+            console.log('1- handleResponse');
             if (loginResponse != null) {
+                console.log(loginResponse);
+                console.log(loginResponse.idToken);
+                console.log(loginResponse.accessToken);
                 userName = loginResponse.account.username;
-                console.log('loginResponse:', loginResponse);
             }
             else {
                 var currentAccounts = msalApplication.getAllAccounts();
                 if (currentAccounts == null || currentAccounts.length == 0) {
-                    console.log('No account found....');
                     return;
                 }
                 userName = currentAccounts[0].username;
-                console.log('userName:', userName);
             }
             updateUserInterface();
             acquireTokenAndGetUser();
         }
 
         function acquireTokenAndGetUser() {
+            console.log('2- acquireTokenAndGetUser');
             var request = graphConfig.requestObj;
             request.account = msalApplication.getAccountByUsername(userName);
-            console.log('request: ', request);
-            console.log('request.account: ', request.account);
             msalApplication.acquireTokenSilent(request)
                 .then(function (tokenResponse) {
-                    getUserFromMSGraph(tokenResponse.accessToken, graphAPICallback)
+                    getUserFromMSGraph(tokenResponse.accessToken)
                 })
                 .catch(function (error) {
                     console.log('silent token acquisition fails.');
@@ -110,7 +110,7 @@
                         if (loginType == 'POPUP') {
                             msalApplication.acquireTokenPopup(request)
                                 .then(function (tokenResponse) {
-                                    getUserFormMSGraph(tokenResponse.accessToken, graphAPICallback);
+                                    getUserFormMSGraph(tokenResponse.accessToken);
                                 })
                                 .catch(handleError);
                         }
@@ -118,12 +118,12 @@
                 });
         }
 
-        function getUserFromMSGraph(accessToken, callback) {
+        function getUserFromMSGraph(accessToken) {
             var endpoint = graphConfig.graphMeEndpoint;
             var xmlHttp = new XMLHttpRequest();
             xmlHttp.onreadystatechange = function () {
                 if (this.readyState == 4 && this.status == 200) {
-                    callback(JSON.parse(this.responseText));
+                    displayJSON(this.responseText);
                 }
             }
             xmlHttp.open("GET", endpoint, true);
@@ -131,16 +131,8 @@
             xmlHttp.send();
         }
 
-        function graphAPICallback(data) {
-            document.getElementById('json').innerHTML = JSON.stringify(data, null, 2);
-        }
-
-        function updateUserInterface() {
-            var divWelcome = document.getElementById('WelcomeMessage');
-            divWelcome.innerHTML = 'Welcome <strong>' + userName + '</strong> to Microsoft Graph API';
-            var loginButton = document.getElementById('SignIn');
-            loginButton.innerHTML = 'Sign Out';
-            loginButton.setAttribute('onclick', 'signOut()');
+        function displayJSON(data) {
+            document.getElementById('json').innerHTML = JSON.stringify(JSON.parse(data), null, 2);
         }
     </script>
 </body>
